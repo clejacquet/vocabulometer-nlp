@@ -50,6 +50,8 @@ public class MyResource {
     private JsonObject textToJson(Lemmatizer lemmatizer, String p) {
         List<Map.Entry<String, String>> lemmas = lemmatizer.lemmatize(p);
 
+        lemmas.forEach((entry) -> System.out.println(entry.getKey() + ": " + entry.getValue()));
+
         // Get the list of words -- no punctuation
         TokenFilter punctuationFilter = new TokenFilter(ModelProvider.getPunctuation());
         List<String> words = punctuationFilter
@@ -61,13 +63,16 @@ public class MyResource {
         // Filter the list of (word, lemma) pair to only vocabulary lemmas
         FilterPipeline pipeline = new FilterPipeline();
         pipeline.add(
+                new CapitalFilter(), // No capital word after a point
                 punctuationFilter,  // No punctuation
                 new TokenFilter(ModelProvider.getStopWords()), // No stop word
                 new NERFilter(p, ModelProvider.getNerClassifier()), // No organization name, location or time
-                RegexFilter.buildNotMatch("\\d"), // No word with digits
-                RegexFilter.buildNotMatch("[\\[\\]{}@\\\\/\"'()`\\-]") // No word with digits
+                RegexFilter.buildNotMatch("^..?$", true), // No word less than two characters
+                RegexFilter.buildNotMatch("\\d", true), // No word with digits
+                RegexFilter.buildNotMatch("[\\[\\]{}@\\\\/\"'()`\\-]", true) // No special characters
         );
-        lemmas = pipeline.apply(lemmas);
+        lemmas = pipeline
+                .apply(lemmas);
 
         Map<String, String> wordToLemma = lemmas
                 .stream()
@@ -85,7 +90,7 @@ public class MyResource {
                             if (wordToLemma.containsKey(word)) {
                                 return Json.createObjectBuilder()
                                         .add("raw", word)
-                                        .add("lemma", wordToLemma.get(word))
+                                        .add("lemma", wordToLemma.get(word).toLowerCase())
                                         .build();
                             } else {
                                 return Json.createObjectBuilder()

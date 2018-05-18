@@ -59,7 +59,7 @@ public class MyResourceTest {
      */
     @Test
     public void testGetIt() {
-        JsonArray array = JsonUtils.toJsonStringArray(Collections.singletonList("Hello world, I'm Clement, nice to meet you."), Function.identity());
+        JsonArray array = JsonUtils.toJsonStringArray(Collections.singletonList("Hello world, I'm Clement, nice to meet you My Friend with 700£."), Function.identity());
 
 
         Entity<JsonObject> texts = Entity.json(Json.createObjectBuilder().add("texts", array).build());

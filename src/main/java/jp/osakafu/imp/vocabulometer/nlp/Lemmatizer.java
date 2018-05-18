@@ -34,7 +34,7 @@ class Lemmatizer {
                 String lemma = token.get(CoreAnnotations.LemmaAnnotation.class);
 
                 // Retrieve and add the lemma for each word into the list of lemmas
-                lemmas.add(new AbstractMap.SimpleEntry<>(token.originalText(), lemma.toLowerCase()));
+                lemmas.add(new AbstractMap.SimpleEntry<>(token.originalText(), lemma));
             }
         }
 
