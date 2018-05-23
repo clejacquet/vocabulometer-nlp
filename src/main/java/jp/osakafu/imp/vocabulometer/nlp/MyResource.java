@@ -53,7 +53,7 @@ public class MyResource {
         lemmas.forEach((entry) -> System.out.println(entry.getKey() + ": " + entry.getValue()));
 
         // Get the list of words -- no punctuation
-        TokenFilter punctuationFilter = new TokenFilter(ModelProvider.getPunctuation());
+        TokenFilter punctuationFilter = TokenFilter.buildNotInclude(ModelProvider.getPunctuation());
         List<String> words = punctuationFilter
                 .apply(lemmas)
                 .stream()
@@ -65,11 +65,9 @@ public class MyResource {
         pipeline.add(
                 new CapitalFilter(), // No capital word after a point
                 punctuationFilter,  // No punctuation
-                new TokenFilter(ModelProvider.getStopWords()), // No stop word
                 new NERFilter(p, ModelProvider.getNerClassifier()), // No organization name, location or time
-                RegexFilter.buildNotMatch("^..?$", true), // No word less than two characters
-                RegexFilter.buildNotMatch("\\d", true), // No word with digits
-                RegexFilter.buildNotMatch("[\\[\\]{}@\\\\/\"'()`\\-]", true) // No special characters
+                TokenFilter.buildNotInclude(ModelProvider.getStopWords()), // Not a stopword
+                TokenFilter.buildInclude(ModelProvider.getWords()) // Only in the dictionary
         );
         lemmas = pipeline
                 .apply(lemmas);

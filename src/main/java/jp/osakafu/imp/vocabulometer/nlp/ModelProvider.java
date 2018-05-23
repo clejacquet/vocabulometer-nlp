@@ -9,19 +9,21 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Properties;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public class ModelProvider {
     private static final String POS_TAGGER_PATH = "src/main/resources/models/english-left3words-distsim.tagger";
     private static final String NER_MODEL_PATH = "src/main/resources/classifiers/english.all.3class.distsim.crf.ser.gz";
     private static final String STOPWORDS_PATH = "src/main/resources/stopwords.txt";
+    private static final String WORDS_PATH = "src/main/resources/words.txt";
     private static final String PUNCTUATION_PATH = "src/main/resources/punctuation.txt";
 
     private static AbstractSequenceClassifier<CoreLabel> NER_CLASSIFIER;
     private static StanfordCoreNLP POS_PIPELINE;
     private static Set<String> STOPWORDS;
+    private static Set<String> WORDS;
     private static Set<String> PUNCTUATION;
 
     public static AbstractSequenceClassifier<CoreLabel> getNerClassifier() {
@@ -54,9 +56,9 @@ public class ModelProvider {
         return POS_PIPELINE;
     }
 
-    private static Set<String> getTokenSetFromFile(String path) {
+    private static <T extends Collection<String>> T getTokenCollectionFromFile(String path, Supplier<T> collectionSupplier) {
         try {
-            Set<String> wordSet = new HashSet<>();
+            T wordSet = collectionSupplier.get();
 
             BufferedReader bf = new BufferedReader(new FileReader(path));
 
@@ -69,24 +71,32 @@ public class ModelProvider {
             return wordSet;
         } catch (FileNotFoundException err) {
             System.err.println("File path provided not existing");
-            return null;
+            return  collectionSupplier.get();
         } catch (IOException e) {
             e.printStackTrace();
-            return null;
+            return  collectionSupplier.get();
         }
     }
 
     public static Set<String> getStopWords() {
         if (STOPWORDS == null) {
-            STOPWORDS = getTokenSetFromFile(STOPWORDS_PATH);
+            STOPWORDS = getTokenCollectionFromFile(STOPWORDS_PATH, HashSet::new);
         }
 
         return STOPWORDS;
     }
 
+    public static Set<String> getWords() {
+        if (WORDS == null) {
+            WORDS = getTokenCollectionFromFile(WORDS_PATH, HashSet::new);
+        }
+
+        return WORDS;
+    }
+
     public static Set<String> getPunctuation() {
         if (PUNCTUATION == null) {
-            PUNCTUATION = getTokenSetFromFile(PUNCTUATION_PATH);
+            PUNCTUATION = getTokenCollectionFromFile(PUNCTUATION_PATH, HashSet::new);
         }
 
         return PUNCTUATION;
@@ -96,6 +106,7 @@ public class ModelProvider {
         getNerClassifier();
         getPosPipeline();
         getStopWords();
+        getWords();
         getPunctuation();
     }
 }

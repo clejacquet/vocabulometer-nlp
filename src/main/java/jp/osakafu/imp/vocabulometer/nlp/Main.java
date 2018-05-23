@@ -4,7 +4,6 @@ import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
 
-import java.io.IOException;
 import java.net.URI;
 
 /**
@@ -31,10 +30,9 @@ public class Main {
 
     /**
      * Main method.
-     * @param args
-     * @throws IOException
+     * @param args args
      */
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
         ModelProvider.forceInit();
 
         final HttpServer server = startServer();
@@ -43,12 +41,9 @@ public class Main {
 
 
         // register shutdown hook
-        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-            @Override
-            public void run() {
-                System.out.println("Stopping server..");
-                server.stop();
-            }
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("Stopping server..");
+            server.shutdownNow();
         }, "shutdownHook"));
 
         // run
