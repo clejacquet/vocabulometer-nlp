@@ -17,14 +17,14 @@ public class ModelProvider {
     private static final String POS_TAGGER_PATH = "src/main/resources/models/english-left3words-distsim.tagger";
     private static final String NER_MODEL_PATH = "src/main/resources/classifiers/english.all.3class.distsim.crf.ser.gz";
     private static final String STOPWORDS_PATH = "src/main/resources/stopwords.txt";
-    private static final String WORDS_PATH = "src/main/resources/words.txt";
     private static final String PUNCTUATION_PATH = "src/main/resources/punctuation.txt";
+    private static final String VOCAB_PATH = "src/main/resources/merged.txt";
 
     private static AbstractSequenceClassifier<CoreLabel> NER_CLASSIFIER;
     private static StanfordCoreNLP POS_PIPELINE;
     private static Set<String> STOPWORDS;
-    private static Set<String> WORDS;
     private static Set<String> PUNCTUATION;
+    private static Vocab VOCAB;
 
     public static AbstractSequenceClassifier<CoreLabel> getNerClassifier() {
         if (NER_CLASSIFIER == null) {
@@ -32,7 +32,7 @@ public class ModelProvider {
                 NER_CLASSIFIER = CRFClassifier.getClassifier(NER_MODEL_PATH);
             } catch (Exception e) {
                 e.printStackTrace();
-                return null;
+                return NER_CLASSIFIER;
             }
         }
 
@@ -86,12 +86,39 @@ public class ModelProvider {
         return STOPWORDS;
     }
 
-    public static Set<String> getWords() {
-        if (WORDS == null) {
-            WORDS = getTokenCollectionFromFile(WORDS_PATH, HashSet::new);
+    public static Vocab getVocab() {
+        if (VOCAB == null) {
+            VOCAB = new Vocab();
+            HashMap<String, Integer> levels = new HashMap<>();
+            Set<String> all = new HashSet<>();
+
+            try {
+                BufferedReader bf = new BufferedReader(new FileReader(VOCAB_PATH));
+                int currentLevel = 1;
+
+                String line = bf.readLine();
+                while (line != null) {
+                    if (line.equals("")) {
+                        currentLevel++;
+                    } else {
+                        levels.put(line, currentLevel);
+                        all.add(line);
+                    }
+
+                    line = bf.readLine();
+                }
+
+                VOCAB.all = all;
+                VOCAB.levels = levels;
+
+            } catch (FileNotFoundException err) {
+                System.err.println("File path provided not existing");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
-        return WORDS;
+        return VOCAB;
     }
 
     public static Set<String> getPunctuation() {
@@ -106,7 +133,7 @@ public class ModelProvider {
         getNerClassifier();
         getPosPipeline();
         getStopWords();
-        getWords();
+        getVocab();
         getPunctuation();
     }
 }

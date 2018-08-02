@@ -17,8 +17,8 @@ class Lemmatizer {
         this.pipeline = pipeline;
     }
 
-    List<Map.Entry<String, String>> lemmatize(String documentText) {
-        List<Map.Entry<String, String>> lemmas = new ArrayList<>();
+    List<Lemma> lemmatize(String documentText) {
+        List<Lemma> lemmas = new ArrayList<>();
 
         // create an empty Annotation just with the given text
         Annotation document = new Annotation(documentText);
@@ -34,7 +34,7 @@ class Lemmatizer {
                 String lemma = token.get(CoreAnnotations.LemmaAnnotation.class);
 
                 // Retrieve and add the lemma for each word into the list of lemmas
-                lemmas.add(new AbstractMap.SimpleEntry<>(token.originalText(), lemma));
+                lemmas.add(new Lemma(lemma, token.originalText()));
             }
         }
 

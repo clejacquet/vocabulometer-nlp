@@ -1,23 +1,22 @@
 package jp.osakafu.imp.vocabulometer.nlp;
 
-import java.util.Map;
+import java.util.List;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
-class Filter implements UnaryOperator<Map<String, String>> {
-    private Predicate<Map.Entry<String, String>> predicate;
+class Filter implements UnaryOperator<List<Lemma>> {
+    private Predicate<Lemma> predicate;
 
-    Filter(Predicate<Map.Entry<String, String>> predicate) {
+    Filter(Predicate<Lemma> predicate) {
         this.predicate = predicate;
     }
 
     @Override
-    public Map<String, String> apply(Map<String, String> strings) {
+    public List<Lemma> apply(List<Lemma> strings) {
         return strings
-                .entrySet()
                 .stream()
                 .filter(this.predicate)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                .collect(Collectors.toList());
     }
 }

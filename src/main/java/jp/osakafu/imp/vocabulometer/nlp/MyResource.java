@@ -48,55 +48,79 @@ public class MyResource {
     }
 
     private JsonObject textToJson(Lemmatizer lemmatizer, String p) {
-        List<Map.Entry<String, String>> lemmas = lemmatizer.lemmatize(p);
+        List<Lemma> lemmas = lemmatizer.lemmatize(p);
 
-        lemmas.forEach((entry) -> System.out.println(entry.getKey() + ": " + entry.getValue()));
-
-        // Get the list of words -- no punctuation
-        TokenFilter punctuationFilter = TokenFilter.buildNotInclude(ModelProvider.getPunctuation());
-        List<String> words = punctuationFilter
+        // Get the list of words without punctuation
+        TokenStage punctuationStage = new TokenStage(ModelProvider.getPunctuation(), Lemma.Type.PUNCTUATION);
+        List<Lemma> words = punctuationStage
                 .apply(lemmas)
                 .stream()
-                .map(Map.Entry::getKey)
+                .filter(lemma -> lemma.type != Lemma.Type.PUNCTUATION)
                 .collect(Collectors.toList());
 
         // Filter the list of (word, lemma) pair to only vocabulary lemmas
-        FilterPipeline pipeline = new FilterPipeline();
+        StagePipeline pipeline = new StagePipeline();
         pipeline.add(
-                new CapitalFilter(), // No capital word after a point
-                punctuationFilter,  // No punctuation
-                new NERFilter(p, ModelProvider.getNerClassifier()), // No organization name, location or time
-                TokenFilter.buildNotInclude(ModelProvider.getStopWords()), // Not a stopword
-                TokenFilter.buildInclude(ModelProvider.getWords()) // Only in the dictionary
+                new RegexStage("[^a-z-]", false, Lemma.Type.UNKNOWN),
+                new RegexStage("[(){}\\[\\]]", false, Lemma.Type.UNKNOWN),
+                new RegexStage("^-?[0-9,\\.]+$", false, Lemma.Type.NUMBER),
+                new CapitalStage(), // No capital word after a point
+                punctuationStage,  // No punctuation
+                new NERStage(p, ModelProvider.getNerClassifier()), // No organization name, location or time
+                new LevelStage(),
+                new TokenStage(ModelProvider.getStopWords(), Lemma.Type.STOPWORD) // Not a stopword
         );
-        lemmas = pipeline
-                .apply(lemmas);
 
-        Map<String, String> wordToLemma = lemmas
+        lemmas = pipeline.apply(lemmas);
+
+//        for (Lemma lemma : lemmas
+//                .stream()
+//                .filter(lemma -> lemma.type == Lemma.Type.VOCAB || lemma.type == Lemma.Type.DEFAULT)
+//                .collect(Collectors.toList())) {
+//            System.out.println(lemma.raw + " / " + lemma.lemma + " / " + lemma.type);
+//        }
+
+        int vocabDefaultSize = lemmas
                 .stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (first, second) -> first));
+                .filter(lemma -> lemma.type == Lemma.Type.VOCAB || lemma.type == Lemma.Type.DEFAULT)
+                .collect(Collectors.toSet())
+                .size();
+
+        double unrecognizedRate = 0.0;
+
+        if (vocabDefaultSize != 0) {
+            unrecognizedRate = 1.0 -
+                    (double) lemmas
+                            .stream()
+                            .filter(lemma -> lemma.type == Lemma.Type.VOCAB)
+                            .collect(Collectors.toSet())
+                            .size()
+                            / (double) vocabDefaultSize;
+        }
+
+        System.out.println(unrecognizedRate);
+
+//        for (Lemma lemma : lemmas) {
+//            System.out.println(lemma.raw + ": " + lemma.type.toString() + "(" + lemma.type + ")");
+//        }
 
         // Build the final JSON object for the given text
         return Json.createObjectBuilder()
                 .add("text", p)
                 .add("interWords", JsonUtils.toJsonStringArray(
-                        splitByWords(p, words),
+                        splitByWords(p, words
+                                .stream()
+                                .map(Lemma::getRaw)
+                                .collect(Collectors.toList())),
                         Function.identity()))
-                .add("words", JsonUtils.toJsonValuesArray(
-                        words,
-                        word -> {
-                            if (wordToLemma.containsKey(word)) {
-                                return Json.createObjectBuilder()
-                                        .add("raw", word)
-                                        .add("lemma", wordToLemma.get(word).toLowerCase())
-                                        .build();
-                            } else {
-                                return Json.createObjectBuilder()
-                                        .add("raw", word)
-                                        .build();
-                            }
-
-                        }))
+                .add("words", JsonUtils.toJsonValuesArray(words, Lemma::toJson))
+                .add("unrecognized", JsonUtils.toJsonStringArray(
+                        lemmas
+                                .stream()
+                                .filter(lemma -> lemma.type == Lemma.Type.DEFAULT)
+                                .collect(Collectors.toSet()),
+                        Lemma::getLemma))
+                .add("unrecognizedRate", unrecognizedRate)
                 .build();
     }
 
